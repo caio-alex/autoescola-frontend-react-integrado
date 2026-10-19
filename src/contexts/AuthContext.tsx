@@ -30,42 +30,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Dentro do teu AuthContext.jsx (por volta da linha 25-35):
-const login = async (loginInput, senhaInput) => {
-  try {
-    // 1. Aponta para a API .NET na porta 5000 e na rota /api/auth/login
-    const response = await fetch('http://localhost:5000/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      // 2. Envia os nomes das propriedades que a API .NET espera:
-      body: JSON.stringify({
-        emailOrCpf: loginInput,
-        password: senhaInput,
-      }),
+  const login = async (emailOrCpf: string, password: string): Promise<UserSummary> => {
+    const response = await api.post<LoginResponse>('/auth/login', {
+      emailOrCpf,
+      password,
     });
 
-    if (!response.ok) {
-      throw new Error('Login ou senha inválidos.');
-    }
+    const { accessToken, user: loggedUser } = response.data;
+    localStorage.setItem('@AutoEscola:token', accessToken);
+    localStorage.setItem('@AutoEscola:user', JSON.stringify(loggedUser));
+    localStorage.setItem('@AutoEscola:offlineDemo', 'false');
 
-    const data = await response.json();
-    
-    // Guarda o token e o utilizador retornados pelo .NET
-    localStorage.setItem('@AutoEscola:token', data.accessToken);
-    localStorage.setItem('@AutoEscola:user', JSON.stringify(data.user));
-    localStorage.removeItem('@AutoEscola:offlineDemo');
-    setToken(data.accessToken);
-    setUser(data.user);
+    setToken(accessToken);
+    setUser(loggedUser);
     setIsOfflineDemo(false);
-    
-    return data.user;
-  } catch (error) {
-    console.error('Erro no login:', error);
-    throw error;
-  }
-};
+    return loggedUser;
+  };
 
   const enableOfflineDemoProfile = (role: 'STUDENT' | 'INSTRUCTOR' | 'ADMIN'): UserSummary => {
     const mockProfiles: Record<'STUDENT' | 'INSTRUCTOR' | 'ADMIN', UserSummary> = {
